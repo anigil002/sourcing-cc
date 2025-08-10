@@ -3174,3 +3174,1222 @@ window.filterDatabaseByLocation = (location) => {
                             </div>
                             <svg class="w-12 h-12 text-blue-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="stat-label">Urgent Demob</p>
+                                <p class="stat-value text-red-400">${urgentDemob}</p>
+                                <p class="text-xs text-gray-500 mt-1">Within 30 days</p>
+                            </div>
+                            <svg class="w-12 h-12 text-red-500 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">Quick Actions</h3>
+                        <div class="space-y-3">
+                            <button class="btn-primary w-full" onclick="document.getElementById('cv-database-input').click()">
+                                Upload CVs to Database
+                            </button>
+                            <button class="btn-secondary w-full" onclick="window.switchView('database')">
+                                View CV Database
+                            </button>
+                            <button class="btn-secondary w-full" onclick="window.switchView('candidates')">
+                                Process Project Candidates
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">System Status</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">Storage Usage</span>
+                                <span class="text-sm">${formatFileSize(totalStorageUsed)} / ${formatFileSize(maxStorage)}</span>
+                            </div>
+                            <div class="storage-meter">
+                                <div class="storage-fill bg-gradient-to-r from-cyan-500 to-blue-500" style="width: ${(totalStorageUsed / maxStorage * 100).toFixed(1)}%"></div>
+                            </div>
+                            <div class="flex items-center gap-3 mt-4">
+                                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span class="text-sm text-gray-400">System operational</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span class="text-sm text-gray-400">AI processing available</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+       function renderDatabaseView() {
+    const mainView = document.getElementById('main-view');
+    try {
+        renderDatabaseTable();
+    } catch (error) {
+        console.error('Error rendering database view:', error);
+    }
+}
+
+        function renderDatabaseTable() {
+    const mainView = document.getElementById('main-view');
+    
+    const startIndex = (currentDatabasePage - 1) * databasePageSize;
+    const endIndex = startIndex + databasePageSize;
+    const paginatedCandidates = filteredDatabaseCandidates.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(filteredDatabaseCandidates.length / databasePageSize);
+    
+    mainView.innerHTML = `
+        <div class="mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-3xl font-bold">CV Database</h2>
+                    <p class="text-gray-400 mt-1">Centralized candidate repository</p>
+                </div>
+                <div class="flex gap-3">
+                    <button class="btn-primary" onclick="document.getElementById('cv-database-input').click()">
+                        <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Upload CVs
+                    </button>
+                    <button class="btn-secondary" onclick="window.exportDatabaseToCSV()">
+                        <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Export CSV
+                    </button>
+                    <button class="btn-secondary" onclick="window.openProcessingModeModal()">
+                        <svg class="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Processing Mode
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Storage & Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card">
+                <p class="stat-label">Total Profiles</p>
+                <p class="stat-value" id="total-profiles">${databaseCandidates.length}</p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Verified Contacts</p>
+                <p class="stat-value text-green-400" id="verified-contacts">
+                    ${databaseCandidates.filter(c => {
+                        const p = c.candidate_profile?.personal_info || {};
+                        return validateEmail(p.email) && validatePhone(p.phone);
+                    }).length}
+                </p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">This Month</p>
+                <p class="stat-value" id="monthly-uploads">
+                    ${(() => {
+                        const thisMonth = new Date();
+                        thisMonth.setDate(1);
+                        return databaseCandidates.filter(c => {
+                            const processDate = c.metadata?.processing_date?.toDate();
+                            return processDate && processDate >= thisMonth;
+                        }).length;
+                    })()}
+                </p>
+            </div>
+            <div class="stat-card">
+                <p class="stat-label">Avg. Processing</p>
+                <p class="stat-value" id="avg-processing-time">
+                    ${processingTimes.length > 0 ? 
+                        (processingTimes.reduce((a, b) => a + b) / processingTimes.length / 1000).toFixed(1) + 's' : 
+                        '0s'}
+                </p>
+            </div>
+        </div>
+        
+        <!-- Processing Statistics -->
+        ${processingStats.totalProcessed > 0 ? `
+            <div class="card mb-6">
+                <h3 class="text-lg font-semibold mb-4">Processing Statistics</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <p class="text-gray-400">Total Processed</p>
+                        <p class="text-lg font-semibold text-green-400">${processingStats.totalProcessed}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">API Calls Saved</p>
+                        <p class="text-lg font-semibold text-cyan-400">${processingStats.costSavings}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Batch Processed</p>
+                        <p class="text-lg font-semibold text-purple-400">${processingStats.batchesProcessed}</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400">Success Rate</p>
+                        <p class="text-lg font-semibold text-yellow-400">
+                            ${Math.round((processingStats.totalProcessed / 
+                                (processingStats.totalProcessed + processingStats.totalFailed)) * 100)}%
+                        </p>
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+        
+        <!-- Storage Meter -->
+        <div class="card mb-6">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-lg font-semibold">Storage Usage</h3>
+                <span class="text-sm text-gray-400">
+                    <span id="storage-percentage">${((totalStorageUsed / maxStorage) * 100).toFixed(1)}%</span> used
+                </span>
+            </div>
+            <div class="storage-meter">
+                <div id="storage-fill" class="storage-fill bg-gradient-to-r from-cyan-500 to-blue-500" 
+                    style="width: ${((totalStorageUsed / maxStorage) * 100).toFixed(1)}%"></div>
+            </div>
+            <div class="flex justify-between mt-2 text-sm text-gray-400">
+                <span><span id="storage-used">${formatFileSize(totalStorageUsed)}</span> used</span>
+                <span><span id="storage-total">${formatFileSize(maxStorage)}</span> total</span>
+            </div>
+        </div>
+        
+        <!-- Drop Zone -->
+        <div id="database-drop-zone" class="drop-zone mb-6">
+            <svg class="w-12 h-12 mx-auto text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p class="text-gray-400">Drag and drop CV files here, or click to browse</p>
+            <p class="text-xs text-gray-500 mt-2">PDF and DOCX files only. Max 5MB per file.</p>
+        </div>
+        
+        <!-- Enhanced Search and Filters -->
+        <div class="card mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div class="md:col-span-2">
+                    <div class="relative">
+                        <input type="text" id="database-search" 
+                            placeholder="Quick search by name, email, skills, company..." 
+                            class="input w-full pl-10" 
+                            onkeyup="window.searchDatabase(this.value)">
+                        <svg class="w-5 h-5 absolute left-3 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+                <div>
+                    <select id="database-filter" class="select w-full" 
+                        onchange="window.filterDatabaseByLocation(this.value)">
+                        <option value="">All Locations</option>
+                        <option value="usa">USA</option>
+                        <option value="canada">Canada</option>
+                        <option value="uk">UK</option>
+                        <option value="uae">UAE</option>
+                        <option value="australia">Australia</option>
+                        <option value="india">India</option>
+                        <option value="singapore">Singapore</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <button class="btn-primary w-full flex items-center justify-center" onclick="window.openAdvancedSearchModal()">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                        </svg>
+                        Advanced Search
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Active filters display area -->
+            <div id="search-info"></div>
+            
+            <!-- Quick Filters Section -->
+            <div class="border-t border-gray-700 pt-4">
+                <div class="flex items-center justify-between mb-3">
+                    <p class="text-sm font-medium text-gray-300">Quick Skill Filters</p>
+                    <div class="flex gap-2">
+                        <button class="text-cyan-400 hover:text-cyan-300 text-xs" onclick="window.clearAllFilters()">
+                            Clear All Filters
+                        </button>
+                        <span class="text-gray-600">|</span>
+                        <button class="text-blue-400 hover:text-blue-300 text-xs" onclick="window.exportFilteredResults()">
+                            Export Filtered (${filteredDatabaseCandidates.length})
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap gap-2">
+                    <!-- Project Management Skills -->
+                    <div class="flex items-center gap-1">
+                        <span class="text-xs text-gray-500">PM:</span>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['project management'])">
+                            Project Management
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['PMP'])">
+                            PMP
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['agile', 'scrum'])">
+                            Agile/Scrum
+                        </button>
+                    </div>
+                    
+                    <span class="text-gray-600">|</span>
+                    
+                    <!-- Planning & Controls -->
+                    <div class="flex items-center gap-1">
+                        <span class="text-xs text-gray-500">Planning:</span>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['planning'])">
+                            Planning
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['primavera', 'P6'])">
+                            Primavera P6
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['cost control'])">
+                            Cost Control
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['scheduling'])">
+                            Scheduling
+                        </button>
+                    </div>
+                    
+                    <span class="text-gray-600">|</span>
+                    
+                    <!-- Industry -->
+                    <div class="flex items-center gap-1">
+                        <span class="text-xs text-gray-500">Industry:</span>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['construction'])">
+                            Construction
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['engineering'])">
+                            Engineering
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['infrastructure'])">
+                            Infrastructure
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['oil', 'gas'])">
+                            Oil & Gas
+                        </button>
+                    </div>
+                    
+                    <span class="text-gray-600">|</span>
+                    
+                    <!-- Technical Skills -->
+                    <div class="flex items-center gap-1">
+                        <span class="text-xs text-gray-500">Tech:</span>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['BIM'])">
+                            BIM
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['AutoCAD'])">
+                            AutoCAD
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['SAP'])">
+                            SAP
+                        </button>
+                        <button class="skill-tag hover:bg-cyan-900 hover:border-cyan-400" 
+                            onclick="window.filterDatabaseBySkills(['ERP'])">
+                            ERP
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Experience Level Quick Filters -->
+                <div class="mt-3 pt-3 border-t border-gray-700">
+                    <p class="text-xs text-gray-500 mb-2">Experience Level:</p>
+                    <div class="flex gap-2">
+                        <button class="text-xs px-3 py-1 bg-gray-800 rounded-full hover:bg-gray-700 border border-gray-700 hover:border-cyan-400" 
+                            onclick="window.filterByExperienceLevel('entry')">
+                            Entry (0-3 years)
+                        </button>
+                        <button class="text-xs px-3 py-1 bg-gray-800 rounded-full hover:bg-gray-700 border border-gray-700 hover:border-cyan-400" 
+                            onclick="window.filterByExperienceLevel('mid')">
+                            Mid (4-8 years)
+                        </button>
+                        <button class="text-xs px-3 py-1 bg-gray-800 rounded-full hover:bg-gray-700 border border-gray-700 hover:border-cyan-400" 
+                            onclick="window.filterByExperienceLevel('senior')">
+                            Senior (9-15 years)
+                        </button>
+                        <button class="text-xs px-3 py-1 bg-gray-800 rounded-full hover:bg-gray-700 border border-gray-700 hover:border-cyan-400" 
+                            onclick="window.filterByExperienceLevel('expert')">
+                            Expert (15+ years)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Candidates Table -->
+        ${filteredDatabaseCandidates.length > 0 ? `
+            <div class="card overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Contact</th>
+                            <th>Position</th>
+                            <th>Experience</th>
+                            <th>Location</th>
+                            <th>Skills</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${paginatedCandidates.map(candidate => renderDatabaseRow(candidate)).join('')}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination Controls -->
+            ${filteredDatabaseCandidates.length > databasePageSize ? `
+                <div class="flex justify-between items-center mt-6">
+                    <p class="text-sm text-gray-400">
+                        Showing ${startIndex + 1} - ${Math.min(endIndex, filteredDatabaseCandidates.length)} 
+                        of ${filteredDatabaseCandidates.length} candidates
+                    </p>
+                    <div class="flex gap-2">
+                        <button class="btn-secondary ${currentDatabasePage === 1 ? 'opacity-50 cursor-not-allowed' : ''}" 
+                            onclick="window.changeDatabasePage(-1)" 
+                            ${currentDatabasePage === 1 ? 'disabled' : ''}>
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                            Previous
+                        </button>
+                        <span class="px-4 py-2 text-sm bg-gray-800 rounded-lg">
+                            Page ${currentDatabasePage} of ${totalPages}
+                        </span>
+                        <button class="btn-secondary ${currentDatabasePage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}" 
+                            onclick="window.changeDatabasePage(1)" 
+                            ${currentDatabasePage === totalPages ? 'disabled' : ''}>
+                            Next
+                            <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            ` : ''}
+        ` : `
+            <div class="text-center py-20">
+                <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p class="text-gray-400 mb-4">
+                    ${databaseCandidates.length === 0 ? 'No candidates in database yet' : 'No candidates match your filters'}
+                </p>
+                ${databaseCandidates.length === 0 ? `
+                    <button class="btn-primary" onclick="document.getElementById('cv-database-input').click()">
+                        Upload First CV
+                    </button>
+                ` : `
+                    <button class="btn-secondary" onclick="window.clearAllFilters()">
+                        Clear Filters
+                    </button>
+                `}
+            </div>
+        `}
+    `;
+    
+    // Setup drag and drop
+    setupDatabaseDragAndDrop();
+    
+    // Update statistics
+    updateDatabaseStatistics();
+}
+        
+        function renderDatabaseRow(candidate) {
+            const profile = candidate.candidate_profile || {};
+            const personal = profile.personal_info || {};
+            const professional = profile.professional_summary || {};
+            const skills = profile.skills?.technical_skills || [];
+            
+            const emailValid = validateEmail(personal.email);
+            const phoneValid = validatePhone(personal.phone);
+            
+            // Check if this is a duplicate (has been updated)
+            const isDuplicate = candidate.metadata?.update_count > 0;
+            
+            return `
+                <tr class="data-row">
+                    <td>
+                        <div class="font-medium">${personal.full_name || 'Unknown'}</div>
+                        <div class="text-xs text-gray-500">
+                            ${candidate.metadata?.source_file || ''}
+                            ${isDuplicate ? '<span class="duplicate-badge ml-2">Updated</span>' : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-sm">
+                            ${personal.email ? `
+                                <span class="${emailValid ? 'contact-verified' : 'contact-unverified'}">
+                                    ${personal.email}
+                                </span>
+                            ` : '-'}
+                        </div>
+                        <div class="text-sm">
+                            ${personal.phone ? `
+                                <span class="${phoneValid ? 'contact-verified' : 'contact-unverified'}">
+                                    ${personal.phone}
+                                </span>
+                            ` : '-'}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="text-sm">${professional.current_position || '-'}</div>
+                        <div class="text-xs text-gray-500">${professional.industry || ''}</div>
+                    </td>
+                    <td class="text-sm">
+                        ${professional.total_experience_years ? `${professional.total_experience_years} years` : '-'}
+                    </td>
+                    <td class="text-sm">
+                        ${personal.location || '-'}
+                    </td>
+                    <td>
+                        <div class="flex flex-wrap gap-1">
+                            ${skills.slice(0, 3).map(skill => `
+                                <span class="skill-tag">${skill}</span>
+                            `).join('')}
+                            ${skills.length > 3 ? `
+                                <span class="text-xs text-gray-500">+${skills.length - 3}</span>
+                            ` : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="flex gap-2">
+                            <button class="text-cyan-400 hover:text-cyan-300" onclick="window.viewDatabaseCandidate('${candidate.id}')">
+                                View
+                            </button>
+                            <button class="text-blue-400 hover:text-blue-300" onclick="window.addToProject('${candidate.id}')">
+                                Add to Project
+                            </button>
+                            ${userPermissions.edit_candidates ? `
+                                <button class="text-red-400 hover:text-red-300" onclick="window.deleteDatabaseCandidate('${candidate.id}')">
+                                    Delete
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Database Pagination
+        window.changeDatabasePage = (direction) => {
+            const totalPages = Math.ceil(filteredDatabaseCandidates.length / databasePageSize);
+            const newPage = currentDatabasePage + direction;
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentDatabasePage = newPage;
+                renderDatabaseTable();
+            }
+        };
+        
+        // Database View Functions
+        window.viewDatabaseCandidate = (candidateId) => {
+            const candidate = databaseCandidates.find(c => c.id === candidateId);
+            if (!candidate) return;
+            
+            const profile = candidate.candidate_profile || {};
+            const personal = profile.personal_info || {};
+            const professional = profile.professional_summary || {};
+            
+            openModal(`
+                <div class="p-6 max-w-4xl">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h3 class="text-2xl font-bold">${personal.full_name || 'Unknown'}</h3>
+                            <p class="text-gray-400">${professional.current_position || 'Position not specified'}</p>
+                        </div>
+                        <button class="close-button" onclick="window.closeModal()">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Personal Information -->
+                        <div class="card">
+                            <h4 class="font-semibold mb-3">Contact Information</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Email:</span>
+                                    <span class="${validateEmail(personal.email) ? 'contact-verified' : 'contact-unverified'}">
+                                        ${personal.email || 'Not provided'}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Phone:</span>
+                                    <span class="${validatePhone(personal.phone) ? 'contact-verified' : 'contact-unverified'}">
+                                        ${personal.phone || 'Not provided'}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Location:</span>
+                                    <span>${personal.location || 'Not specified'}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Nationality:</span>
+                                    <span>${personal.nationality || 'Not specified'}</span>
+                                </div>
+                                ${personal.linkedin_url ? `
+                                    <div class="mt-3">
+                                        <a href="${personal.linkedin_url}" target="_blank" class="text-blue-400 hover:text-blue-300 text-sm">
+                                            View LinkedIn Profile →
+                                        </a>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Professional Summary -->
+                        <div class="card">
+                            <h4 class="font-semibold mb-3">Professional Summary</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Experience:</span>
+                                    <span>${professional.total_experience_years ? `${professional.total_experience_years} years` : 'Not specified'}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Industry:</span>
+                                    <span>${professional.industry || 'Not specified'}</span>
+                                </div>
+                                <div class="mt-3">
+                                    <p class="text-gray-400 mb-1">Summary:</p>
+                                    <p class="text-sm">${professional.summary || 'No summary available'}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Skills -->
+                        <div class="card">
+                            <h4 class="font-semibold mb-3">Skills & Certifications</h4>
+                            <div class="space-y-3">
+                                ${profile.skills?.technical_skills?.length > 0 ? `
+                                    <div>
+                                        <p class="text-sm text-gray-400 mb-2">Technical Skills:</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            ${profile.skills.technical_skills.map(skill => `
+                                                <span class="skill-tag">${skill}</span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${profile.skills?.certifications?.length > 0 ? `
+                                    <div>
+                                        <p class="text-sm text-gray-400 mb-2">Certifications:</p>
+                                        <div class="flex flex-wrap gap-2">
+                                            ${profile.skills.certifications.map(cert => `
+                                                <span class="badge badge-primary">${cert}</span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${profile.skills?.languages?.length > 0 ? `
+                                    <div>
+                                        <p class="text-sm text-gray-400 mb-2">Languages:</p>
+                                        <p class="text-sm">${profile.skills.languages.join(', ')}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Experience -->
+                        <div class="card">
+                            <h4 class="font-semibold mb-3">Experience</h4>
+                            <div class="space-y-3">
+                                ${(profile.experience || []).slice(0, 3).map(exp => `
+                                    <div class="border-l-2 border-gray-700 pl-3">
+                                        <p class="font-medium text-sm">${exp.position}</p>
+                                        <p class="text-sm text-gray-400">${exp.company} | ${exp.duration}</p>
+                                        ${exp.location ? `<p class="text-xs text-gray-500">${exp.location}</p>` : ''}
+                                        ${exp.key_achievements?.length > 0 ? `
+                                            <ul class="list-disc list-inside text-xs text-gray-400 mt-1">
+                                                ${exp.key_achievements.map(ach => `<li>${ach}</li>`).join('')}
+                                            </ul>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <!-- Education -->
+                        ${profile.education?.length > 0 ? `
+                            <div class="card">
+                                <h4 class="font-semibold mb-3">Education</h4>
+                                <div class="space-y-3">
+                                    ${profile.education.map(edu => `
+                                        <div class="text-sm">
+                                            <p class="font-medium">${edu.degree}</p>
+                                            <p class="text-gray-400">${edu.institution}</p>
+                                            <p class="text-xs text-gray-500">${edu.field} | ${edu.year || 'Year not specified'}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Availability -->
+                        <div class="card">
+                            <h4 class="font-semibold mb-3">Availability</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Notice Period:</span>
+                                    <span>${profile.availability?.notice_period || 'Not specified'}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Preferred Location:</span>
+                                    <span>${profile.availability?.preferred_location || 'Not specified'}</span>
+                                </div>
+                                ${profile.availability?.salary_expectation ? `
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-400">Salary Expectation:</span>
+                                        <span>${profile.availability.salary_expectation}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Metadata -->
+                    <div class="mt-6 p-4 bg-gray-800 rounded-lg">
+                        <h4 class="font-semibold mb-2 text-sm">Processing Information</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs text-gray-400">
+                            <div>
+                                <p>Source File:</p>
+                                <p class="text-gray-300">${candidate.metadata?.source_file || 'Unknown'}</p>
+                            </div>
+                            <div>
+                                <p>File Size:</p>
+                                <p class="text-gray-300">${formatFileSize(candidate.metadata?.file_size || 0)}</p>
+                            </div>
+                            <div>
+                                <p>Processed Date:</p>
+                                <p class="text-gray-300">${formatDate(candidate.metadata?.processing_date?.toDate())}</p>
+                            </div>
+                            <div>
+                                <p>Confidence Scores:</p>
+                                <p class="text-gray-300">
+                                    E: ${profile.contact_verification?.email_confidence || 'N/A'} | 
+                                    P: ${profile.contact_verification?.phone_confidence || 'N/A'}
+                                </p>
+                            </div>
+                        </div>
+                        ${candidate.metadata?.update_count > 0 ? `
+                            <div class="mt-2 text-xs text-gray-400">
+                                <p>Update Count: ${candidate.metadata.update_count}</p>
+                                <p>Last Updated: ${formatDate(candidate.metadata?.last_updated?.toDate())}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="flex gap-3 justify-end mt-6">
+                        <button class="btn-secondary" onclick="window.closeModal()">Close</button>
+                        <button class="btn-primary" onclick="window.addToProject('${candidate.id}')">
+                            Add to Project
+                        </button>
+                        ${userPermissions.edit_candidates ? `
+                            <button class="btn-danger" onclick="window.deleteDatabaseCandidate('${candidate.id}')">
+                                Delete
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `);
+        };
+        
+        window.addToProject = async (candidateId) => {
+            if (!activeProject) {
+                showNotification('Please select a project first', 'error');
+                return;
+            }
+            
+            const candidate = databaseCandidates.find(c => c.id === candidateId);
+            if (!candidate) return;
+            
+            try {
+                // Create a candidate record in the active project
+                const profile = candidate.candidate_profile || {};
+                const candidateData = {
+                    fileName: candidate.metadata?.source_file || 'Database Import',
+                    rawContent: JSON.stringify(profile).substring(0, 1000),
+                    screening_summary: {
+                        candidate_name: profile.personal_info?.full_name || 'Unknown',
+                        overall_fit: 'Not Analyzed',
+                        recommended_roles: [],
+                        key_strengths: profile.skills?.technical_skills?.slice(0, 5) || [],
+                        potential_gaps: [],
+                        notice_period: profile.availability?.notice_period || 'Not specified'
+                    },
+                    must_have_compliance: {},
+                    database_import: true,
+                    original_database_id: candidateId,
+                    uploadedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection(`users/${userId}/projects/${activeProject.id}/candidates`).add(candidateData);
+                
+                showNotification(`Added ${profile.personal_info?.full_name || 'candidate'} to ${activeProject.projectName}`, 'success');
+                closeModal();
+                
+            } catch (error) {
+                showNotification('Failed to add candidate to project: ' + error.message, 'error');
+            }
+        };
+        
+        function renderConfiguration() {
+            const mainView = document.getElementById('main-view');
+            
+            mainView.innerHTML = `
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold mb-2">Configuration</h2>
+                    <p class="text-gray-400">Manage system components and settings</p>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Project Management -->
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">Project Management</h3>
+                        <div class="space-y-4">
+                            <button class="btn-primary w-full" onclick="window.openAddProjectModal()">
+                                + Add New Project
+                            </button>
+                            
+                            <div class="space-y-2 max-h-60 overflow-y-auto">
+                                ${projects.map(project => `
+                                    <div class="bg-gray-800 rounded-lg p-3 flex justify-between items-center">
+                                        <span>${project.projectName}</span>
+                                        <div class="flex gap-2">
+                                            <button class="text-cyan-400 hover:text-cyan-300 text-sm" onclick="window.openProjectDetails('${project.id}')">
+                                                Edit
+                                            </button>
+                                            ${userPermissions.edit_candidates ? `
+                                                <button class="text-red-400 hover:text-red-300 text-sm" onclick="window.deleteProject('${project.id}')">
+                                                    Delete
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Position Management -->
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">Position Management</h3>
+                        <div class="space-y-4">
+                            <div class="flex gap-2">
+                                <select id="config-project-select" class="select flex-1">
+                                    <option value="">Select project...</option>
+                                    ${projects.map(p => `<option value="${p.id}">${p.projectName}</option>`).join('')}
+                                </select>
+                            </div>
+                            
+                            <div class="flex gap-2">
+                                <button class="btn-primary flex-1" onclick="window.openAddPositionModal()" id="add-position-btn" disabled>
+                                    + Add Position
+                                </button>
+                                <button class="btn-secondary flex-1" onclick="document.getElementById('positions-upload-input').click()" id="bulk-upload-btn" disabled>
+                                    Bulk Upload
+                                </button>
+                            </div>
+                            
+                            <div id="position-list" class="space-y-2 max-h-48 overflow-y-auto">
+                                <p class="text-gray-500 text-sm text-center">Select a project to view positions</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- System Settings -->
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">System Settings</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Gemini API Key</label>
+                                <input type="password" id="api-key-input" class="input w-full" 
+                                    value="${localStorage.getItem('gemini_api_key') || ''}" placeholder="Enter your Gemini API key">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Recruiter Name</label>
+                                <input type="text" id="recruiter-name-input" class="input w-full" 
+                                    value="${localStorage.getItem('recruiter_name') || ''}" placeholder="Your name for email signatures">
+                            </div>
+                            
+                            <button class="btn-primary w-full" onclick="window.saveConfigSettings()">
+                                Save Settings
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Database Settings -->
+                    <div class="card">
+                        <h3 class="text-xl font-semibold mb-4">Database Management</h3>
+                        <div class="space-y-4">
+                            <div class="bg-gray-800 rounded-lg p-4">
+                                <p class="text-sm text-gray-400">Storage Usage</p>
+                                <p class="text-lg font-medium">${formatFileSize(totalStorageUsed)} / ${formatFileSize(maxStorage)}</p>
+                                <div class="storage-meter mt-2">
+                                    <div class="storage-fill bg-gradient-to-r from-cyan-500 to-blue-500" 
+                                        style="width: ${(totalStorageUsed / maxStorage * 100).toFixed(1)}%"></div>
+                                </div>
+                            </div>
+                            
+                            <button class="btn-secondary w-full" onclick="window.cleanupOldRecords()">
+                                Cleanup Old Records (30+ days)
+                            </button>
+                            
+                            <button class="btn-danger w-full" onclick="window.clearDatabase()">
+                                Clear Entire Database
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- User Management -->
+                    ${userPermissions.manage_users ? `
+                        <div class="card">
+                            <h3 class="text-xl font-semibold mb-4">User Management</h3>
+                            <div class="space-y-4">
+                                <button class="btn-primary w-full" onclick="window.openUserManagement()">
+                                    Manage Users & Permissions
+                                </button>
+                                
+                                <div class="bg-gray-800 rounded-lg p-4">
+                                    <p class="text-sm text-gray-400">Current User Role</p>
+                                    <p class="text-lg font-medium capitalize">${userRole}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+            
+            // Add event listener for project selection in configuration
+            document.getElementById('config-project-select').addEventListener('change', (e) => {
+                const projectId = e.target.value;
+                const addBtn = document.getElementById('add-position-btn');
+                const bulkBtn = document.getElementById('bulk-upload-btn');
+                const positionList = document.getElementById('position-list');
+                
+                if (projectId) {
+                    addBtn.disabled = false;
+                    bulkBtn.disabled = false;
+                    
+                    const projectPositions = positions[projectId] || [];
+                    if (projectPositions.length === 0) {
+                        positionList.innerHTML = '<p class="text-gray-500 text-sm text-center">No positions added yet</p>';
+                    } else {
+                        positionList.innerHTML = projectPositions.map(pos => `
+                            <div class="bg-gray-800 rounded-lg p-3">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-medium">${pos.title}</p>
+                                        <p class="text-xs text-gray-400 mt-1">${pos.description.substring(0, 100)}...</p>
+                                    </div>
+                                    ${userPermissions.edit_candidates ? `
+                                        <button class="text-red-400 hover:text-red-300 ml-2" onclick="window.deletePosition('${pos.id}', '${projectId}')">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    addBtn.disabled = true;
+                    bulkBtn.disabled = true;
+                    positionList.innerHTML = '<p class="text-gray-500 text-sm text-center">Select a project to view positions</p>';
+                }
+            });
+        }
+		window.updateCandidateInterest = async (candidateId, status) => {
+    try {
+        await db.collection(`users/${userId}/projects/${activeProject.id}/candidates`)
+            .doc(candidateId)
+            .update({
+                interestStatus: status,
+                interestStatusUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        
+        // Update local data
+        const candidate = candidates.find(c => c.id === candidateId);
+        if (candidate) {
+            candidate.interestStatus = status;
+        }
+        
+        // Show notification based on status
+        const statusText = status === 'interested' ? 'Interested' : 
+                          status === 'not_interested' ? 'Not Interested' : 'Yet to Decide';
+        showNotification(`Marked candidate as ${statusText}`, 'success');
+        
+    } catch (error) {
+        showNotification('Failed to update candidate interest: ' + error.message, 'error');
+    }
+};
+        window.updateEmailStatus = async (candidateId, isChecked) => {
+    try {
+        const updateData = {
+            emailSent: isChecked
+        };
+        
+        if (isChecked) {
+            // When checking the box, save email details
+            const candidate = candidates.find(c => c.id === candidateId);
+            updateData.emailSentDate = firebase.firestore.FieldValue.serverTimestamp();
+            updateData.emailDetails = {
+                position: candidate?.screening_summary?.recommended_roles?.[0] || 'Unknown',
+                project: activeProject.projectName,
+                projectId: activeProject.id,
+                sentBy: auth.currentUser?.email || 'Unknown'
+            };
+        } else {
+            // When unchecking, optionally clear the data
+            updateData.emailSentDate = null;
+            updateData.emailDetails = null;
+        }
+        
+        await db.collection(`users/${userId}/projects/${activeProject.id}/candidates`)
+            .doc(candidateId)
+            .update(updateData);
+        
+        // Update local data
+        const candidate = candidates.find(c => c.id === candidateId);
+        if (candidate) {
+            candidate.emailSent = isChecked;
+            if (isChecked) {
+                candidate.emailSentDate = { toDate: () => new Date() };
+                candidate.emailDetails = updateData.emailDetails;
+            }
+        }
+        
+        showNotification(isChecked ? 'Marked as email sent' : 'Email status updated', 'success');
+        
+    } catch (error) {
+        showNotification('Failed to update email status: ' + error.message, 'error');
+    }
+};
+        // Database management functions
+        window.cleanupOldRecords = async () => {
+            if (!confirm('This will permanently delete all CV records older than 30 days. Continue?')) return;
+            
+            showLoading(true);
+            try {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                
+                let deletedCount = 0;
+                const batch = db.batch();
+                
+                const oldRecords = await db.collection('cv_database')
+                    .where('metadata.processing_date', '<', thirtyDaysAgo)
+                    .get();
+                
+                oldRecords.forEach(doc => {
+                    batch.delete(doc.ref);
+                    deletedCount++;
+                });
+                
+                await batch.commit();
+                
+                showNotification(`Deleted ${deletedCount} old records`, 'success');
+                
+                // Reload database
+                await loadDatabaseCandidates();
+                
+            } catch (error) {
+                showNotification('Cleanup failed: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        };
+        
+        window.clearDatabase = async () => {
+            if (!confirm('WARNING: This will permanently delete ALL CV records from the database. This action cannot be undone. Continue?')) return;
+            if (!confirm('Are you absolutely sure? All CV data will be lost forever.')) return;
+            
+            showLoading(true);
+            try {
+                const allRecords = await db.collection('cv_database').get();
+                let batch = db.batch();
+                let count = 0;
+                
+                allRecords.forEach(doc => {
+                    batch.delete(doc.ref);
+                    count++;
+                    if (count % 500 === 0) {
+                        // Commit batch every 500 records
+                        batch.commit();
+                        batch = db.batch();
+                    }
+                });
+                
+                await batch.commit();
+                
+                showNotification('Database cleared successfully', 'success');
+                
+                // Reset storage
+                totalStorageUsed = 0;
+                databaseCandidates = [];
+                filteredDatabaseCandidates = [];
+                
+                if (currentView === 'database') {
+                    renderDatabaseView();
+                }
+                
+            } catch (error) {
+                showNotification('Failed to clear database: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        };
+        
+        // Setup drag and drop for database
+        function setupDatabaseDragAndDrop() {
+            const dropZone = document.getElementById('database-drop-zone');
+            if (!dropZone) return;
+            
+            dropZone.addEventListener('click', () => {
+                document.getElementById('cv-database-input').click();
+            });
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('active');
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('active');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('active');
+                
+                const files = Array.from(e.dataTransfer.files);
+                if (files.length > 0) {
+                    processDatabaseFiles(files);
+                }
+            });
+        }
+        
+        // Existing render functions continue...
+        function renderProjects() {
+            const mainView = document.getElementById('main-view');
+            
+            mainView.innerHTML = `
+                <div class="mb-8">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-3xl font-bold">Projects</h2>
+                        <button class="btn-primary" onclick="window.openAddProjectModal()">
+                            + Add Project
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${projects.map(project => `
+                        <div class="card hover:border-cyan-700 cursor-pointer" onclick="window.openProjectDetails('${project.id}')">
+                            <h3 class="text-xl font-semibold mb-2">${project.projectName}</h3>
+                            <div class="space-y-2 text-sm text-gray-400">
+                                <p>Positions: ${(positions[project.id] || []).length}</p>
+                                <p>Knowledge Docs: ${(knowledgeBase[project.id] || []).length}</p>
+                                <p>Created: ${formatDate(project.createdAt?.toDate())}</p>
+                            </div>
+                            <div class="mt-4 flex gap-2">
+                                <button class="btn-secondary text-sm" onclick="event.stopPropagation(); window.setActiveProject('${project.id}')">
+                                    Set Active
+                                </button>
+                                ${userPermissions.edit_candidates ? `
+                                    <button class="btn-danger text-sm" onclick="event.stopPropagation(); window.deleteProject('${project.id}')">
+                                        Delete
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        function renderCandidates() {
+    const mainView = document.getElementById('main-view');
+    
+    if (!activeProject) {
+        mainView.innerHTML = `
+            <div class="text-center py-20">
+                <p class="text-gray-400 mb-4">Please select a project first</p>
+                <button class="btn-primary" onclick="window.switchView('projects')">
+                    Go to Projects
+                </button>
+            </div>
+        `;
+        return;
+    }
+	// Filter candidates based on current filter settings
+function filterCandidates() {
+    filteredCandidates = candidates.filter(candidate => {
+        // Interest status filter
+        if (candidateFilters.interestStatus !== 'all') {
+            const status = candidate.interestStatus || 'yet_to_decide';
+            
+            if (candidateFilters.interestStatus === 'exclude_not_interested' && status === 'not_interested') {
+                return false;
+            } else if (candidateFilters.interestStatus !== 'exclude_not_interested' && 
+                       candidateFilters.interestStatus !== status) {
+                return false;
+            }
+        }
+        
+        // Email sent filter
+        if (candidateFilters.emailSent !== 'all') {
+            const emailSent = candidate.emailSent || false;
+            if (candidateFilters.emailSent === 'sent' && !emailSent) return false;
+            if (candidateFilters.emailSent === 'not_sent
