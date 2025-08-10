@@ -1753,12 +1753,12 @@ IMPORTANT: Extract actual information from each CV. If information is not availa
 
     const responseText = await callGemini2API(combinedPrompt, apiKey, {
         temperature: 0.3,
-        maxOutputTokens: 8192
+        maxOutputTokens: 30000,
+        topP: 0.8
     });
     
     return JSON.parse(responseText);
 }
-
 // Save batch results to database
 async function saveBatchResults(batchAnalysis, successfulExtractions) {
     const results = batchAnalysis.batch_results || [];
@@ -1861,107 +1861,85 @@ Project Type: ${p.project_type || 'Not specified'}
         // --- DATABASE SPECIFIC FUNCTIONS ---
         
         // Enhanced AI Processing with Contact Extraction for Database
-        async function processWithDatabaseAI(content, apiKey, fileName) {
-            const prompt = `
-            You are RecruitPro Database AI, specialized in extracting structured candidate information from CVs for database storage.
-            
-            TASK: Extract comprehensive candidate information from the CV content below and format it as structured JSON.
-            
-            CV CONTENT:
-            ${content}
-            
-            Generate a JSON response with this EXACT structure:
-            
-            {
-                "candidate_profile": {
-                    "personal_info": {
-                        "full_name": "Complete name of the candidate",
-                        "email": "Primary email address",
-                        "phone": "Primary phone number",
-                        "location": "Current location/city/country",
-                        "linkedin_url": "LinkedIn profile URL if mentioned",
-                        "nationality": "Nationality if mentioned"
-                    },
-                    "professional_summary": {
-                        "current_position": "Current job title",
-                        "total_experience_years": 0,
-                        "industry": "Primary industry/sector",
-                        "summary": "Brief professional summary (max 200 chars)"
-                    },
-                    "skills": {
-                        "technical_skills": ["List of technical skills"],
-                        "soft_skills": ["List of soft skills"],
-                        "certifications": ["Professional certifications"],
-                        "languages": ["Languages spoken with proficiency level"]
-                    },
-                    "experience": [
-                        {
-                            "company": "Company name",
-                            "position": "Job title",
-                            "duration": "Duration in job",
-                            "location": "Job location",
-                            "key_achievements": ["Top 2-3 achievements"]
-                        }
-                    ],
-                    "education": [
-                        {
-                            "institution": "University/School name",
-                            "degree": "Degree/Qualification",
-                            "field": "Field of study",
-                            "year": "Graduation year",
-                            "location": "Institution location"
-                        }
-                    ],
-                    "contact_verification": {
-                        "email_confidence": "high|medium|low",
-                        "phone_confidence": "high|medium|low",
-                        "location_confidence": "high|medium|low"
-                    },
-                    "keywords": ["Relevant keywords for search"],
-                    "availability": {
-                        "notice_period": "Notice period if mentioned",
-                        "preferred_location": "Preferred work location",
-                        "salary_expectation": "Salary expectation if mentioned"
-                    }
+       async function processWithDatabaseAI(content, apiKey, fileName) {
+    const prompt = `
+    You are RecruitPro Database AI, specialized in extracting structured candidate information from CVs for database storage.
+    
+    TASK: Extract comprehensive candidate information from the CV content below and format it as structured JSON.
+    
+    CV CONTENT:
+    ${content}
+    
+    Generate a JSON response with this EXACT structure:
+    
+    {
+        "candidate_profile": {
+            "personal_info": {
+                "full_name": "Complete name of the candidate",
+                "email": "Primary email address",
+                "phone": "Primary phone number",
+                "location": "Current location/city/country",
+                "linkedin_url": "LinkedIn profile URL if mentioned",
+                "nationality": "Nationality if mentioned"
+            },
+            "professional_summary": {
+                "current_position": "Current job title",
+                "total_experience_years": 0,
+                "industry": "Primary industry/sector",
+                "summary": "Brief professional summary (max 200 chars)"
+            },
+            "skills": {
+                "technical_skills": ["List of technical skills"],
+                "soft_skills": ["List of soft skills"],
+                "certifications": ["Professional certifications"],
+                "languages": ["Languages spoken with proficiency level"]
+            },
+            "experience": [
+                {
+                    "company": "Company name",
+                    "position": "Job title",
+                    "duration": "Duration in job",
+                    "location": "Job location",
+                    "key_achievements": ["Top 2-3 achievements"]
                 }
-            }
-            
-            IMPORTANT INSTRUCTIONS:
-            - Extract actual information from the CV content, don't make assumptions
-            - For experience years, calculate based on work history
-            - Include only verified contact information you can find in the text
-            - Keep summaries concise to optimize storage
-            - If information is not available, use null or empty array
-            - Prioritize accuracy over completeness
-            `;
-            
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{ text: prompt }]
-                        }],
-                        generationConfig: {
-                            responseMimeType: "application/json",
-                            temperature: 0.3
-                        }
-                    })
-                });
-                
-                if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(`AI processing failed: ${error}`);
+            ],
+            "education": [
+                {
+                    "institution": "University/School name",
+                    "degree": "Degree/Qualification",
+                    "field": "Field of study",
+                    "year": "Graduation year",
+                    "location": "Institution location"
                 }
-                
-                const result = await response.json();
-                return JSON.parse(result.candidates[0].content.parts[0].text);
-            } catch (error) {
-                console.error('AI Processing error:', error);
-                throw error;
+            ],
+            "contact_verification": {
+                "email_confidence": "high|medium|low",
+                "phone_confidence": "high|medium|low",
+                "location_confidence": "high|medium|low"
+            },
+            "keywords": ["Relevant keywords for search"],
+            "availability": {
+                "notice_period": "Notice period if mentioned",
+                "preferred_location": "Preferred work location",
+                "salary_expectation": "Salary expectation if mentioned"
             }
         }
+    }
+    
+    IMPORTANT INSTRUCTIONS:
+    - Extract actual information from the CV content, don't make assumptions
+    - For experience years, calculate based on work history
+    - Include only verified contact information you can find in the text
+    - Keep summaries concise to optimize storage
+    - If information is not available, use null or empty array
+    - Prioritize accuracy over completeness
+    `;
+    
+    return await callGemini2API(prompt, apiKey, {
+        temperature: 0.3,
+        maxOutputTokens: 8192
+    });
+}
         
         // File reading utilities
         async function readPdfFile(file) {
@@ -3353,14 +3331,6 @@ window.filterDatabaseByLocation = (location) => {
         renderDatabaseTable();
     } catch (error) {
         console.error('Error rendering database view:', error);
-        mainView.innerHTML = `
-            <div class="text-center py-20">
-                <p class="text-red-400 mb-4">Error loading database view</p>
-                <button class="btn-primary" onclick="window.renderDatabaseView()">
-                    Try Again
-                </button>
-            </div>
-        `;
     }
 }
 		<!-- Processing Statistics -->
@@ -7164,123 +7134,98 @@ window.exportFilteredResults = () => {
         
         // RecruitPro AI Processing
         async function processWithRecruitProAI(content, apiKey) {
-            const projectKnowledge = knowledgeBase[activeProject.id] || [];
-            const projectPositions = positions[activeProject.id] || [];
-            
-            const knowledgeContext = {
-                projectInfo: projectKnowledge.map(doc => doc.extractedText).join('\n\n'),
-                jobDescriptions: projectPositions.map(p => `
-                    Title: ${p.title}
-                    Description: ${p.description}
-                    Required Skills: ${p.required_skills?.join(', ') || 'Not specified'}
-                    Location: ${p.location || 'Not specified'}
-                    Start Date: ${p.start_date || 'ASAP'}
-                `).join('\n\n')
-            };
-            
-            const prompt = `
-            You are RecruitPro, an AI assistant specialized in candidate screening for the Sourcing Command Center.
-            
-            PROJECT CONTEXT:
-            Project Name: ${activeProject.projectName}
-            
-            Project Knowledge Base Information:
-            ${knowledgeContext.projectInfo}
-            
-            Available Job Positions:
-            ${knowledgeContext.jobDescriptions}
-            
-            CANDIDATE DATA:
-            ${content}
-            
-            TASK: Analyze this candidate against all available positions and generate a comprehensive screening analysis.
-            
-            Generate a JSON response with the following EXACT structure:
-            
-            {
-                "screening_summary": {
-                    "candidate_name": "Full name of the candidate",
-					"contact_number": "Phone number from CV if available",
-                    "overall_fit": "Strong Match" | "Potential Match" | "Low Match",
-                    "recommended_roles": ["Best fit position title", "Second best position if applicable"],
-                    "key_strengths": [
-                        "List 3-5 key strengths relevant to the positions",
-                        "Focus on technical skills and experience",
-                        "Include specific achievements or certifications"
-                    ],
-                    "potential_gaps": [
-                        "List 2-3 areas where candidate may need development",
-                        "Be specific about missing requirements",
-                        "Consider both technical and soft skills"
-                    ],
-                    "notice_period": "Current notice period or availability"
-                },
-                "must_have_compliance": {
-                    "Educational Qualification": {
-                        "description": "Required educational background",
-                        "compliance": true/false,
-                        "remarks": "Specific degree or certification details"
-                    },
-                    "Total Experience": {
-                        "description": "Years of relevant experience required",
-                        "compliance": true/false,
-                        "remarks": "Actual years and relevant domains"
-                    },
-                    "Technical Skills": {
-                        "description": "Key technical competencies",
-                        "compliance": true/false,
-                        "remarks": "Specific tools, technologies, methodologies"
-                    },
-                    "Industry Experience": {
-                        "description": "Relevant industry background",
-                        "compliance": true/false,
-                        "remarks": "Specific sectors or project types"
-                    },
-                    "Location Compatibility": {
-                        "description": "Ability to work at project location",
-                        "compliance": true/false,
-                        "remarks": "Current location and mobility"
-                    },
-                    "Communication Skills": {
-                        "description": "Language and communication abilities",
-                        "compliance": true/false,
-                        "remarks": "Languages spoken and proficiency"
-                    },
-                    "Certifications": {
-                        "description": "Required professional certifications",
-                        "compliance": true/false,
-                        "remarks": "Specific certifications held or missing"
-                    },
-                    "Availability": {
-							"description": "Start date alignment",
-							"compliance": true/false,
-							"remarks": "When candidate can start"
-}
-                }
+    const projectKnowledge = knowledgeBase[activeProject.id] || [];
+    const projectPositions = positions[activeProject.id] || [];
+    
+    const knowledgeContext = buildEnhancedKnowledgeContext(activeProject, projectKnowledge, projectPositions);
+    
+    const prompt = `
+    You are RecruitPro, an AI assistant specialized in candidate screening for the Sourcing Command Center.
+    
+    PROJECT CONTEXT:
+    Project Name: ${activeProject.projectName}
+    
+    ${knowledgeContext.projectInfo ? `Project Knowledge Base Information:\n${knowledgeContext.projectInfo}` : ''}
+    
+    ${knowledgeContext.jobDescriptions ? `Available Job Positions:\n${knowledgeContext.jobDescriptions}` : ''}
+    
+    CANDIDATE DATA:
+    ${content}
+    
+    TASK: Analyze this candidate against all available positions and generate a comprehensive screening analysis.
+    
+    Generate a JSON response with the following EXACT structure:
+    
+    {
+        "screening_summary": {
+            "candidate_name": "Full name of the candidate",
+            "contact_number": "Phone number from CV if available",
+            "overall_fit": "Strong Match" | "Potential Match" | "Low Match",
+            "recommended_roles": ["Best fit position title", "Second best position if applicable"],
+            "key_strengths": [
+                "List 3-5 key strengths relevant to the positions",
+                "Focus on technical skills and experience",
+                "Include specific achievements or certifications"
+            ],
+            "potential_gaps": [
+                "List 2-3 areas where candidate may need development",
+                "Be specific about missing requirements",
+                "Consider both technical and soft skills"
+            ],
+            "notice_period": "Current notice period or availability"
+        },
+        "must_have_compliance": {
+            "Educational Qualification": {
+                "description": "Required educational background",
+                "compliance": true,
+                "remarks": "Specific degree or certification details"
+            },
+            "Total Experience": {
+                "description": "Years of relevant experience required",
+                "compliance": true,
+                "remarks": "Actual years and relevant domains"
+            },
+            "Technical Skills": {
+                "description": "Key technical competencies",
+                "compliance": true,
+                "remarks": "Specific tools, technologies, methodologies"
+            },
+            "Industry Experience": {
+                "description": "Relevant industry background",
+                "compliance": true,
+                "remarks": "Specific sectors or project types"
+            },
+            "Location Compatibility": {
+                "description": "Ability to work at project location",
+                "compliance": true,
+                "remarks": "Current location and mobility"
+            },
+            "Communication Skills": {
+                "description": "Language and communication abilities",
+                "compliance": true,
+                "remarks": "Languages spoken and proficiency"
+            },
+            "Certifications": {
+                "description": "Required professional certifications",
+                "compliance": false,
+                "remarks": "Specific certifications held or missing"
+            },
+            "Availability": {
+                "description": "Start date alignment",
+                "compliance": true,
+                "remarks": "When candidate can start"
             }
-            
-            Ensure all fields are populated with relevant, specific information based on the candidate data and job requirements.
-            `;
-            
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{ text: prompt }]
-                    }],
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        temperature: 0.7
-                    }
-                })
-            });
-            
-            if (!response.ok) throw new Error('AI processing failed');
-            
-            const result = await response.json();
-            return JSON.parse(result.candidates[0].content.parts[0].text);
         }
+    }
+    
+    Ensure all fields are populated with relevant, specific information based on the candidate data and job requirements.
+    `;
+    
+    return await callGemini2API(prompt, apiKey, {
+        temperature: 0.7,
+        maxOutputTokens: 8192
+    });
+}
         
         window.processLinkedIn = async () => {
             const url = document.getElementById('linkedin-url').value.trim();
@@ -7594,5 +7539,6 @@ if (savedMode) {
     </script>
 </body>
 </html>
+
 
 
