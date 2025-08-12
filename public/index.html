@@ -4392,4 +4392,804 @@ function filterCandidates() {
         if (candidateFilters.emailSent !== 'all') {
             const emailSent = candidate.emailSent || false;
             if (candidateFilters.emailSent === 'sent' && !emailSent) return false;
-            if (candidateFilters.emailSent === 'not_sent
+            if (candidateFilters.emailSent === 'not_I’ll provide the complete code from where it was cut off, including all the email generation implementation and continuing to the end of the file.
+
+```javascript
+// Continue from where it was cut off...
+// Add these missing functions
+window.filterByExperienceLevel = filterByExperienceLevel;
+window.filterByCertification = filterByCertification;
+window.applyAdvancedFilters = applyAdvancedFilters;
+window.updateCandidateInterest = updateCandidateInterest;
+window.updateEmailStatus = updateEmailStatus;
+window.saveAllSettings = saveAllSettings;
+window.calculateEnhancedDemobMatch = calculateEnhancedDemobMatch;
+window.calculateRetentionAnalytics = calculateRetentionAnalytics;
+
+// =============== EMAIL GENERATION FUNCTIONS ===============
+
+// Enhanced AI-powered email generation
+window.generateEmail = async (candidateId, emailType = 'initial') => {
+    const candidate = candidates.find(c => c.id === candidateId);
+    if (!candidate) return;
+    
+    const apiKey = localStorage.getItem('gemini_api_key');
+    
+    // If no API key, fall back to template
+    if (!apiKey) {
+        generateTemplateEmail(candidate);
+        return;
+    }
+    
+    // Check if email was recently generated (avoid duplicates)
+    if (candidate.lastGeneratedEmail && emailType === 'initial') {
+        const choice = confirm('An email was already generated for this candidate. Generate a new one?');
+        if (!choice) {
+            navigator.clipboard.writeText(
+                `Subject: ${candidate.lastGeneratedEmail.subject}\n\n${candidate.lastGeneratedEmail.body}`
+            );
+            showNotification('Previous email copied to clipboard', 'info');
+            return;
+        }
+    }
+    
+    showLoading(true);
+    
+    try {
+        const prompt = await buildEmailPrompt(candidate, emailType);
+        const responseText = await callGemini2API(prompt, apiKey, {
+            temperature: 0.6,
+            maxOutputTokens: 2048
+        });
+        
+        const emailData = JSON.parse(responseText);
+        
+        // Copy to clipboard
+        const fullEmail = `Subject: ${emailData.email.subject}\n\n${emailData.email.body}`;
+        navigator.clipboard.writeText(fullEmail);
+        
+        // Save email data to Firestore
+        await db.collection(`users/${userId}/projects/${activeProject.id}/candidates`)
+            .doc(candidateId)
+            .update({
+                lastGeneratedEmail: emailData.email,
+                emailGeneratedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                emailType: emailType,
+                emailPersonalizationPoints: emailData.email.key_personalization_points || []
+            });
+        
+        // Update local candidate object
+        candidate.lastGeneratedEmail = emailData.email;
+        
+        showNotification('Personalized email generated and copied to clipboard', 'success');
+        
+        // Show email preview modal
+        showEmailPreview(emailData.email, candidate);
+        
+        // Automatically mark email as sent
+        window.updateEmailStatus(candidateId, true);
+        
+    } catch (error) {
+        console.error('AI email generation failed:', error);
+        showNotification('AI generation failed, using template instead', 'warning');
+        generateTemplateEmail(candidate);
+    } finally {
+        showLoading(false);
+    }
+};
+
+// Build email prompt based on candidate and email type
+async function buildEmailPrompt(candidate, emailType) {
+    const summary = candidate.screening_summary || {};
+    const compliance = candidate.must_have_compliance || {};
+    const recruiterName = localStorage.getItem('recruiter_name') || 'Talent Acquisition Team';
+    
+    // Get position details
+    const projectPositions = positions[activeProject.id] || [];
+    const recommendedPosition = projectPositions.find(p => 
+        p.title === summary.recommended_roles?.[0]
+    ) || projectPositions[0] || {};
+    
+    // Get project context
+    const projectKnowledge = knowledgeBase[activeProject.id] || [];
+    const knowledgeContext = buildEnhancedKnowledgeContext(activeProject, projectKnowledge, projectPositions);
+    
+    if (emailType === 'initial') {
+        return `
+You are RecruitPro, an AI assistant specialized in creating personalized recruitment outreach emails.
+
+Generate a professional, engaging email to a potential candidate based on the following information:
+
+### CANDIDATE PROFILE
+Name: ${summary.candidate_name || 'Candidate'}
+Current Role: ${summary.current_role || 'Professional'}
+Experience: ${summary.total_experience || 'Experienced'}
+Location: ${summary.location || 'Not specified'}
+Key Skills: ${summary.key_skills?.join(', ') || 'Various technical skills'}
+Key Strengths: ${summary.key_strengths?.join(', ') || 'Strong technical background'}
+Overall Fit: ${summary.overall_fit || 'Potential Match'}
+Education: ${summary.education || 'Not specified'}
+Certifications: ${summary.certifications?.join(', ') || 'Not specified'}
+
+### COMPLIANCE STATUS
+Years Experience: ${compliance.years_experience ? '✓ Meets' : '✗ Gap'}
+Technical Skills: ${compliance.technical_skills ? '✓ Meets' : '✗ Gap'}
+Certifications: ${compliance.certifications ? '✓ Meets' : '✗ Gap'}
+Location Match: ${compliance.location_match ? '✓ Meets' : '✗ Gap'}
+
+### TARGET POSITION
+Title: ${recommendedPosition.title || summary.recommended_roles?.[0] || 'Open Position'}
+Description: ${recommendedPosition.description || 'Exciting opportunity in our organization'}
+Location: ${recommendedPosition.location || activeProject.location || 'Canada'}
+Required Skills: ${recommendedPosition.required_skills?.join(', ') || 'Technical expertise required'}
+Start Date: ${recommendedPosition.start_date || 'ASAP'}
+
+### PROJECT CONTEXT
+${knowledgeContext.projectInfo.substring(0, 500)}
+
+### RECRUITER INFORMATION
+Name: ${recruiterName}
+Company: ${activeProject.company || 'Egis'}
+Role: Talent Acquisition Manager
+
+### EMAIL REQUIREMENTS
+1. Subject line should be compelling and mention the specific role and location
+2. Personalize the greeting using the candidate's first name
+3. Reference 2-3 specific achievements, skills, or experiences from their profile
+4. Explain why they're specifically a good fit for THIS role
+5. Mention the project/client context appropriately
+6. Include a clear call-to-action
+7. Professional but warm and engaging tone
+8. Length: 150-200 words
+9. ${summary.overall_fit === 'Strong Match' ? 'Express strong interest and urgency' : 'Be exploratory and inviting'}
+
+### OUTPUT FORMAT
+{
+    "email": {
+        "subject": "Compelling subject line mentioning role and location",
+        "body": "Full email body text with proper formatting and paragraphs",
+        "key_personalization_points": [
+            "Specific achievement or skill mentioned",
+            "Another specific point from CV",
+            "Third personalization point"
+        ],
+        "tone_analysis": "Brief description of tone used",
+        "follow_up_suggestion": "When and how to follow up if no response"
+    }
+}
+
+### IMPORTANT INSTRUCTIONS
+- Be specific, not generic. Reference actual details from the candidate profile
+- Don't oversell or make unrealistic promises
+- Keep it professional but conversational and warm
+- If Strong Match: Express enthusiasm and urgency to connect
+- If Potential Match: Focus on exploring possibilities and mutual fit
+- Include company name naturally in context
+- Don't mention salary unless specified in candidate's expectations
+- Make the email feel personal, not like a mass template
+`;
+    } else if (emailType === 'followup') {
+        return `
+Generate a follow-up email for a candidate who hasn't responded to our initial outreach.
+
+### PREVIOUS CONTEXT
+Candidate: ${summary.candidate_name}
+Role: ${summary.recommended_roles?.[0]}
+Days Since Last Email: ${candidate.daysSinceLastEmail || 7}
+Previous Email Sent: ${candidate.emailSentDate ? formatDate(candidate.emailSentDate.toDate()) : 'Recently'}
+
+### REQUIREMENTS
+1. Reference the previous email without being pushy
+2. Add new information about the role or project
+3. Mention alternative opportunities if available
+4. Create gentle urgency
+5. Keep it shorter than the initial email (100-150 words)
+6. Friendly and understanding tone
+
+### OUTPUT FORMAT
+{
+    "email": {
+        "subject": "Follow-up subject line",
+        "body": "Follow-up email body",
+        "key_personalization_points": ["Point 1", "Point 2"],
+        "tone_analysis": "Tone description",
+        "follow_up_suggestion": "Next steps if still no response"
+    }
+}
+`;
+    } else if (emailType === 'linkedin') {
+        return `
+Generate a LinkedIn connection request message for reaching out to a candidate.
+
+### CANDIDATE
+Name: ${summary.candidate_name}
+Current Role: ${summary.current_role}
+Target Role: ${summary.recommended_roles?.[0]}
+
+### REQUIREMENTS
+1. Maximum 300 characters (strict limit)
+2. Mention one specific detail from their profile
+3. Clear about the opportunity
+4. Professional but friendly
+5. Include company name (${activeProject.company || 'Egis'})
+
+### OUTPUT FORMAT
+{
+    "email": {
+        "subject": "LinkedIn Connection Request",
+        "body": "Message text (max 300 characters)",
+        "key_personalization_points": ["Specific detail referenced"],
+        "tone_analysis": "Brief and professional",
+        "follow_up_suggestion": "Follow up via LinkedIn message after connection"
+    }
+}
+`;
+    }
+}
+
+// Fallback template email generation
+function generateTemplateEmail(candidate) {
+    const summary = candidate.screening_summary || {};
+    const recruiterName = localStorage.getItem('recruiter_name') || 'Talent Acquisition Team';
+    
+    const emailText = `Subject: Exciting ${summary.recommended_roles?.[0] || 'MEP Engineer'} opportunity with ${activeProject.company || 'Egis'} in ${activeProject.location || 'Canada'}
+
+Hi ${summary.candidate_name?.split(' ')[0] || 'there'},
+
+I'm ${recruiterName}, a Talent Acquisition Manager at ${activeProject.company || 'Egis'}. I am reaching out regarding an exciting ${summary.recommended_roles?.[0] || 'MEP Engineer'} opportunity based in ${activeProject.location || 'Canada'}, part of a major ${activeProject.projectName || 'infrastructure'} project recently awarded to us.
+
+Your profile stood out to me, especially your experience in ${summary.key_strengths?.[0] || 'relevant areas'}. I believe your background aligns strongly with what we're looking for.
+
+Please find the job description attached. If this role resonates with your career goals, I'd appreciate it if you could share your updated CV and contact details. I would be glad to connect and explore this opportunity further with you.
+
+Best regards,
+${recruiterName}
+Talent Acquisition Manager
+${activeProject.company || 'Egis'}`;
+    
+    navigator.clipboard.writeText(emailText);
+    showNotification('Email template copied to clipboard', 'success');
+    window.updateEmailStatus(candidate.id, true);
+}
+
+// Show email preview in modal
+function showEmailPreview(emailData, candidate) {
+    const summary = candidate.screening_summary || {};
+    
+    openModal(`
+        <div class="p-8 max-w-3xl">
+            <h3 class="text-2xl font-bold mb-4">Generated Email Preview</h3>
+            
+            <!-- Email Preview -->
+            <div class="bg-gray-800 rounded-lg p-6 mb-6">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-400 mb-1">To:</p>
+                    <p class="font-medium">${summary.email || 'candidate@email.com'}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-sm text-gray-400 mb-1">Subject:</p>
+                    <p class="font-medium text-cyan-400">${emailData.subject}</p>
+                </div>
+                
+                <div class="border-t border-gray-700 pt-4">
+                    <div class="whitespace-pre-wrap">${emailData.body}</div>
+                </div>
+            </div>
+            
+            <!-- Personalization Points -->
+            ${emailData.key_personalization_points?.length > 0 ? `
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium mb-3">Personalization Points Used:</h4>
+                    <ul class="list-disc list-inside space-y-1">
+                        ${emailData.key_personalization_points.map(point => 
+                            `<li class="text-sm text-gray-300">${point}</li>`
+                        ).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+            
+            <!-- Tone Analysis -->
+            ${emailData.tone_analysis ? `
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium mb-2">Tone Analysis:</h4>
+                    <p class="text-sm text-gray-300">${emailData.tone_analysis}</p>
+                </div>
+            ` : ''}
+            
+            <!-- Follow-up Suggestion -->
+            ${emailData.follow_up_suggestion ? `
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium mb-2">Follow-up Strategy:</h4>
+                    <p class="text-sm text-gray-300">${emailData.follow_up_suggestion}</p>
+                </div>
+            ` : ''}
+            
+            <!-- Actions -->
+            <div class="flex gap-3 justify-end">
+                <button class="btn-secondary" onclick="window.regenerateEmail('${candidate.id}')">
+                    Regenerate
+                </button>
+                <button class="btn-secondary" onclick="window.generateEmail('${candidate.id}', 'linkedin')">
+                    Generate LinkedIn Message
+                </button>
+                <button class="btn-primary" onclick="window.closeModal()">
+                    Close
+                </button>
+            </div>
+        </div>
+    `);
+}
+
+// Email helper functions
+window.regenerateEmail = async (candidateId) => {
+    closeModal();
+    await generateEmail(candidateId, 'initial');
+};
+
+window.generateFollowUpEmail = async (candidateId) => {
+    await generateEmail(candidateId, 'followup');
+};
+
+window.generateLinkedInMessage = async (candidateId) => {
+    await generateEmail(candidateId, 'linkedin');
+};
+
+// Toggle email dropdown menu
+window.toggleEmailMenu = (candidateId) => {
+    const menu = document.getElementById(`email-menu-${candidateId}`);
+    if (!menu) return;
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu').forEach(m => {
+        if (m.id !== `email-menu-${candidateId}`) {
+            m.classList.add('hidden');
+        }
+    });
+    
+    // Toggle current menu
+    menu.classList.toggle('hidden');
+    
+    // Close on outside click
+    if (!menu.classList.contains('hidden')) {
+        setTimeout(() => {
+            document.addEventListener('click', function closeDropdown(e) {
+                if (!e.target.closest('.dropdown-container')) {
+                    menu.classList.add('hidden');
+                    document.removeEventListener('click', closeDropdown);
+                }
+            });
+        }, 100);
+    }
+};
+
+// =============== ADDITIONAL WINDOW FUNCTION EXPORTS ===============
+
+window.generateVerbalScript = generateVerbalScript;
+window.showVerbalScript = showVerbalScript;
+window.viewCandidateDetails = viewCandidateDetails;
+window.deleteCandidate = deleteCandidate;
+window.deletePosition = deletePosition;
+window.deleteKnowledgeDoc = deleteKnowledgeDoc;
+window.addPosition = addPosition;
+window.addDemobProfile = addDemobProfile;
+window.editDemobProfile = editDemobProfile;
+window.viewDemobDetails = viewDemobDetails;
+window.viewDemobMatches = viewDemobMatches;
+window.runDemobMatching = runDemobMatching;
+window.exportDemobData = exportDemobData;
+
+// Project management functions
+window.openAddProjectModal = openAddProjectModal;
+window.addProject = addProject;
+window.editProject = editProject;
+window.deleteProject = deleteProject;
+
+// Modal functions
+window.openAddPositionModal = openAddPositionModal;
+window.openAddDemobModal = openAddDemobModal;
+window.openSettingsModal = openSettingsModal;
+window.openUserManagement = openUserManagement;
+
+// Database management
+window.clearDatabase = clearDatabase;
+window.importDatabaseCSV = importDatabaseCSV;
+window.addToDatabaseFromCandidates = addToDatabaseFromCandidates;
+window.removeDatabaseCandidate = removeDatabaseCandidate;
+window.showDatabaseCandidateDetails = showDatabaseCandidateDetails;
+window.changeDatabasePageSize = changeDatabasePageSize;
+window.navigateDatabasePage = navigateDatabasePage;
+
+// Call notes functions
+window.saveCallNotes = saveCallNotes;
+window.exportCallScript = exportCallScript;
+window.printScript = printScript;
+
+// Analytics functions
+window.calculateAnalytics = calculateAnalytics;
+window.exportAnalyticsReport = exportAnalyticsReport;
+
+// Configuration functions
+window.saveAPIKey = saveAPIKey;
+window.saveRecruiterName = saveRecruiterName;
+window.testAPIKey = testAPIKey;
+
+// Knowledge base functions
+window.processKnowledgeFiles = processKnowledgeFiles;
+window.uploadKnowledgeFiles = uploadKnowledgeFiles;
+window.deleteKnowledgeItem = deleteKnowledgeItem;
+
+// Filter functions
+window.filterCandidates = filterCandidates;
+window.setInterestFilter = setInterestFilter;
+window.setEmailFilter = setEmailFilter;
+window.clearFilters = clearFilters;
+
+// Utility functions for formatting
+window.formatDate = formatDate;
+window.formatFileSize = formatFileSize;
+window.getMatchScoreClass = getMatchScoreClass;
+window.getComplianceIcon = getComplianceIcon;
+
+// Email functions
+window.generateEmail = generateEmail;
+window.regenerateEmail = regenerateEmail;
+window.generateFollowUpEmail = generateFollowUpEmail;
+window.generateLinkedInMessage = generateLinkedInMessage;
+window.toggleEmailMenu = toggleEmailMenu;
+window.showEmailPreview = showEmailPreview;
+window.buildEmailPrompt = buildEmailPrompt;
+window.generateTemplateEmail = generateTemplateEmail;
+
+// =============== FILE PROCESSING FUNCTIONS ===============
+
+// Process files main function
+window.processFiles = processFiles;
+window.processWithRecruitProAI = processWithRecruitProAI;
+window.processWithDatabaseAI = processWithDatabaseAI;
+window.processBatchWithSingleAPI = processBatchWithSingleAPI;
+
+// File readers
+window.readPdfFile = readPdfFile;
+window.readDocxFile = readDocxFile;
+window.readExcelFile = readExcelFile;
+
+// Database operations
+window.checkDuplicateCV = checkDuplicateCV;
+window.saveCandidateToDatabase = saveCandidateToDatabase;
+window.loadDatabaseCandidates = loadDatabaseCandidates;
+window.updateDatabaseStatistics = updateDatabaseStatistics;
+
+// API functions
+window.callGemini2API = callGemini2API;
+
+// Enhanced context builder
+window.buildEnhancedKnowledgeContext = buildEnhancedKnowledgeContext;
+
+// Batch processing
+window.processBatchCVs = processBatchCVs;
+window.processFilesIndividually = processFilesIndividually;
+window.processDatabaseFiles = processDatabaseFiles;
+window.processIndividualCV = processIndividualCV;
+window.saveBatchResults = saveBatchResults;
+
+// =============== EVENT LISTENERS SETUP ===============
+
+function setupEventListeners() {
+    // Sidebar navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const view = e.currentTarget.dataset.view;
+            if (view) switchView(view);
+        });
+    });
+    
+    // Project selector
+    document.getElementById('active-project-select').addEventListener('change', (e) => {
+        const projectId = e.target.value;
+        if (projectId) {
+            const project = projects.find(p => p.id === projectId);
+            if (project) setActiveProject(project);
+        }
+    });
+    
+    // Settings button
+    document.getElementById('config-btn').addEventListener('click', () => {
+        openSettingsModal();
+    });
+    
+    // Sign out button
+    document.getElementById('signout-btn').addEventListener('click', async () => {
+        if (confirm('Are you sure you want to sign out?')) {
+            await auth.signOut();
+        }
+    });
+    
+    // Auth buttons
+    document.getElementById('google-signin')?.addEventListener('click', async () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        try {
+            await auth.signInWithPopup(provider);
+        } catch (error) {
+            showNotification('Authentication failed: ' + error.message, 'error');
+        }
+    });
+    
+    document.getElementById('anonymous-signin')?.addEventListener('click', async () => {
+        try {
+            await auth.signInAnonymously();
+        } catch (error) {
+            showNotification('Guest login failed: ' + error.message, 'error');
+        }
+    });
+    
+    // File upload handlers
+    document.getElementById('file-upload-input').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) processFiles(e.target.files);
+        e.target.value = '';
+    });
+    
+    document.getElementById('knowledge-upload-input').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) processKnowledgeFiles(e.target.files);
+        e.target.value = '';
+    });
+    
+    document.getElementById('positions-upload-input').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) processPositionsFile(e.target.files[0]);
+        e.target.value = '';
+    });
+    
+    document.getElementById('demob-upload-input').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) processDemobFile(e.target.files[0]);
+        e.target.value = '';
+    });
+    
+    document.getElementById('cv-database-input').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) processDatabaseFiles(e.target.files);
+        e.target.value = '';
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Ctrl/Cmd + K for quick search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            document.getElementById('database-search')?.focus();
+        }
+        
+        // Escape to close modal
+        if (e.key === 'Escape') {
+            closeModal();
+        }
+        
+        // Ctrl/Cmd + E for email generation
+        if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+            e.preventDefault();
+            const selectedCandidate = document.querySelector('.candidate-card.selected');
+            if (selectedCandidate) {
+                const candidateId = selectedCandidate.dataset.candidateId;
+                if (candidateId) generateEmail(candidateId);
+            }
+        }
+    });
+    
+    // Global click handler for dropdowns
+    document.addEventListener('click', (e) => {
+        // Close dropdowns when clicking outside
+        if (!e.target.closest('.dropdown-container')) {
+            document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                menu.classList.add('hidden');
+            });
+        }
+    });
+}
+
+// =============== INITIALIZE APPLICATION ===============
+
+async function initializeApp() {
+    try {
+        // Load saved settings
+        const savedApiKey = localStorage.getItem('gemini_api_key');
+        const savedRecruiterName = localStorage.getItem('recruiter_name');
+        const savedProcessingMode = localStorage.getItem('processing_mode');
+        const savedPageSize = localStorage.getItem('database_page_size');
+        const savedBatchSize = localStorage.getItem('batch_size');
+        
+        if (savedProcessingMode) {
+            forceProcessingMode = savedProcessingMode;
+        }
+        
+        if (savedPageSize) {
+            databasePageSize = parseInt(savedPageSize) || 25;
+        }
+        
+        if (savedBatchSize) {
+            BATCH_SIZE = parseInt(savedBatchSize) || 5;
+        }
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Check authentication state
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                userId = user.uid;
+                
+                // Update UI with user info
+                const initials = user.displayName ? 
+                    user.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 
+                    'U';
+                const userInitialsEl = document.getElementById('user-initials');
+                if (userInitialsEl) userInitialsEl.textContent = initials;
+                
+                // Hide auth, show app
+                document.getElementById('auth-container').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                
+                // Load user permissions
+                await loadUserPermissions();
+                
+                // Setup database listeners
+                setupProjectsListener();
+                setupDatabaseListener();
+                
+                if (userPermissions.view_demob) {
+                    setupDemobListener();
+                }
+                
+                // Setup candidates listener for active project
+                if (activeProject) {
+                    setupCandidatesListener(activeProject.id);
+                }
+                
+                // Initialize PDF.js
+                if (typeof pdfjsLib !== 'undefined') {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                }
+                
+                // Load dashboard
+                switchView('dashboard');
+                
+                // Check for URL parameters (deep linking)
+                const urlParams = new URLSearchParams(window.location.search);
+                const view = urlParams.get('view');
+                const projectId = urlParams.get('project');
+                const candidateId = urlParams.get('candidate');
+                
+                if (projectId) {
+                    const project = projects.find(p => p.id === projectId);
+                    if (project) {
+                        await setActiveProject(project);
+                    }
+                }
+                
+                if (view) {
+                    switchView(view);
+                }
+                
+                if (candidateId && view === 'candidates') {
+                    setTimeout(() => {
+                        viewCandidateDetails(candidateId);
+                    }, 1000);
+                }
+                
+                // Show welcome message
+                const hour = new Date().getHours();
+                const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+                showNotification(`${greeting}, ${user.displayName || 'Recruiter'}! Welcome to RecruitPro`, 'info');
+                
+            } else {
+                // Show auth, hide app
+                document.getElementById('auth-container').classList.remove('hidden');
+                document.getElementById('app').classList.add('hidden');
+                
+                // Clean up listeners
+                Object.values(unsubscribes).forEach(unsub => {
+                    if (unsub) unsub();
+                });
+                
+                // Clear state
+                userId = null;
+                userRole = 'viewer';
+                userPermissions = {};
+                activeProject = null;
+                projects = [];
+                candidates = [];
+                demobProfiles = [];
+                knowledgeBase = {};
+                positions = {};
+                databaseCandidates = [];
+                filteredCandidates = [];
+                filteredDatabaseCandidates = [];
+            }
+            
+            showLoading(false);
+        });
+        
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showNotification('Failed to initialize app: ' + error.message, 'error');
+        showLoading(false);
+    }
+}
+
+// =============== PERFORMANCE MONITORING ===============
+
+if ('performance' in window) {
+    window.addEventListener('load', () => {
+        const perfData = window.performance.timing;
+        const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+        console.log('Page load time:', pageLoadTime, 'ms');
+        
+        // Track slow loads
+        if (pageLoadTime > 3000) {
+            console.warn('Slow page load detected:', pageLoadTime, 'ms');
+            // Could send to analytics service
+        }
+        
+        // Monitor memory usage
+        if (performance.memory) {
+            console.log('Memory usage:', {
+                used: Math.round(performance.memory.usedJSHeapSize / 1048576) + ' MB',
+                total: Math.round(performance.memory.totalJSHeapSize / 1048576) + ' MB',
+                limit: Math.round(performance.memory.jsHeapSizeLimit / 1048576) + ' MB'
+            });
+        }
+    });
+}
+
+// =============== SERVICE WORKER REGISTRATION ===============
+
+if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('Service Worker registered:', registration);
+            })
+            .catch(err => {
+                console.log('Service Worker registration failed:', err);
+            });
+    });
+}
+
+// =============== ERROR HANDLING ===============
+
+window.addEventListener('error', (event) => {
+    console.error('Global error:', event.error);
+    
+    // Don't show Firebase auth errors to user
+    if (event.error?.message?.includes('auth/')) {
+        event.preventDefault();
+        return;
+    }
+    
+    // Show user-friendly error messages
+    if (event.error?.message?.includes('network')) {
+        showNotification('Network error. Please check your connection.', 'error');
+    } else if (event.error?.message?.includes('Firebase')) {
+        showNotification('Database connection issue. Please refresh the page.', 'error');
+    }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('Unhandled promise rejection:', event.reason);
+    
+    // Handle specific rejection types
+    if (event.reason?.message?.includes('quota')) {
+        showNotification('Storage quota exceeded. Please clear some data.', 'error');
+    }
+});
+
+// =============== START APPLICATION ===============
+
+// Start initialization when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    initializeApp();
+}
+
+        
+    </script>
+</body>
+</html>
